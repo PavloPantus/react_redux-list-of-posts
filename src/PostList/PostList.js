@@ -9,10 +9,11 @@ import commentsUrl from '../api/commentsUrl';
 import Post from './Post/Post';
 import { getPreparedPosts,
   setPosts,
-  getIsLoadingPosts,
-  setIsLoading,
   getIsLoadedPosts,
-  setIsLoaded } from '../store/PostList';
+  setIsLoaded } from '../store/PostListReducer';
+import {
+  getIsLoading,
+  setIsLoading } from '../store/IsLoadingReducer';
 
 function PostList(
   {
@@ -113,7 +114,7 @@ function PostList(
 
 const mapStateToProps = state => ({
   preparedPosts: getPreparedPosts(state),
-  isLoadingPosts: getIsLoadingPosts(state),
+  isLoadingPosts: getIsLoading(state),
   isLoadedPosts: getIsLoadedPosts(state),
 });
 
