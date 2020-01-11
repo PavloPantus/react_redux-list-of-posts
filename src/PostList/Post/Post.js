@@ -1,13 +1,13 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import { connect } from 'react-redux';
 import PostAuthorInfo from './PostAuthorInfo';
 import CommentList from './CommentList/CommentList';
-import {connect} from 'react-redux';
 import {
   removePost,
-} from "../../store/PostListReducer";
+} from '../../store/PostListReducer';
 
-const Post = ({ singlePost, searchQuery, removePostId,}) => {
+const Post = ({ singlePost, searchQuery, removePostId }) => {
   const getHighlightedText = (text, textToHighLight) => {
     const formatedText = text.replace(/[\n\r]/g, ' ');
 
@@ -42,9 +42,11 @@ const Post = ({ singlePost, searchQuery, removePostId,}) => {
           {getHighlightedText(singlePost.title, searchQuery)}
         </h1>
         <button
-          onClick={()=>{removePostId(singlePost.id)}}
-          className={'button button_remove button_remove_post'}
-          type={'button'}
+          onClick={() => {
+            removePostId(singlePost.id);
+          }}
+          className="button button_remove button_remove_post"
+          type="button"
         >
           Delete Post
         </button>
@@ -64,14 +66,15 @@ Post.propTypes = {
     body: PropTypes.string,
     author: PropTypes.object,
     comments: PropTypes.array,
+    id: PropTypes.number,
   }).isRequired,
   searchQuery: PropTypes.string,
+  removePostId: PropTypes.func.isRequired,
 };
 
 Post.defaultProps = {
   searchQuery: '',
 };
-
 
 const mapStateToProps = state => ({
 
@@ -81,4 +84,4 @@ const mapDispatchToProps = {
   removePostId: removePost,
 };
 
-export default connect(mapStateToProps,mapDispatchToProps)(Post);
+export default connect(mapStateToProps, mapDispatchToProps)(Post);

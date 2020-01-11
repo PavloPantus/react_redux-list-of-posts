@@ -1,80 +1,75 @@
-const ACTION_TYPE_SET_PREPARED_POSTS = 'SET_POSTS';
-const ACTION_TYPE_IS_LOADED_POSTS = 'IS_LOADED_POSTS';
-const ACTION_TYPE_COMMENT_TO_DELETE = 'COMMENT_TO_DELETE';
-const ACTION_TYPE_POST_TO_DELETE = 'POST_TO_DELETE';
+import { getPreparedPostsFromServer } from '../api/getPreparedPostsFromServer';
+import { setIsLoading } from './IsLoadingReducer';
+import { setIsLoadedPosts } from './IsLoadedPostsReducer';
+import { setHasError } from './hasErrorReducer';
 
-// actions
+const SET_PREPARED_POSTS = 'SET_POSTS';
+const DELETE_COMMENT = 'DELETE_COMMENT';
+const DELETE_POST = 'DELETE_POST';
 
 export const setPosts = posts => ({
-  type: ACTION_TYPE_SET_PREPARED_POSTS,
+  type: SET_PREPARED_POSTS,
   posts,
 });
 
-export const setIsLoaded = value => ({
-  type: ACTION_TYPE_IS_LOADED_POSTS,
-  status: value,
-});
-
-export const setCommentIdToRemove = (commentId, postId) => ({
-  type: ACTION_TYPE_COMMENT_TO_DELETE,
+export const removeComment = (commentId, postId) => ({
+  type: DELETE_COMMENT,
   commentId,
   postId,
 });
 
-export const removePost = (postId) => ({
-  type: ACTION_TYPE_POST_TO_DELETE,
+export const removePost = postId => ({
+  type: DELETE_POST,
   postId,
 });
 
-// selectors
-export const getPreparedPosts = state => state.preparedPosts.preparedPosts;
-export const getIsLoadedPosts = state => state.preparedPosts.isLoadedPosts;
+export const getPreparedPosts = state => state.preparedPosts;
 
+export const loadPosts = () => (dispatch) => {
+  dispatch(setHasError(false));
+  dispatch(setIsLoading(true));
 
-const initialState = {
-  preparedPosts: [],
-  isLoadedPosts: false,
+  return getPreparedPostsFromServer()
+    .then((posts) => {
+      dispatch(setPosts(posts));
+    })
+    .catch(() => {
+      dispatch(setHasError(true));
+    })
+    .finally(() => {
+      dispatch(setIsLoading(false));
+      dispatch(setIsLoadedPosts(true));
+    });
 };
 
-const postsReducer = (state = initialState, action) => {
+const postsReducer = (preparedPosts = [], action) => {
   switch (action.type) {
-    case ACTION_TYPE_SET_PREPARED_POSTS:
-      return {
-        ...state, preparedPosts: action.posts,
-      };
+    case SET_PREPARED_POSTS:
+      return action.posts;
 
-    case ACTION_TYPE_IS_LOADED_POSTS:
-      return {
-        ...state, isLoadedPosts: action.status,
-      };
-
-    case ACTION_TYPE_COMMENT_TO_DELETE:
-      return {
-        ...state,
-        preparedPosts: state.preparedPosts.map(
-          post=>{
-            if(post.id===action.postId){
-              return {
-                ...post,
-                comments: post.comments.filter(
-                  comment=>comment.id!==action.commentId
-                )
-              }
-            }
-            return post;
+    case DELETE_COMMENT: return preparedPosts
+      .map(
+        (post) => {
+          if (post.id === action.postId) {
+            return {
+              ...post,
+              comments: post.comments.filter(
+                comment => comment.id !== action.commentId
+              ),
+            };
           }
-        )
-      };
 
-    case ACTION_TYPE_POST_TO_DELETE: return {
-      ...state,
-      preparedPosts: state.preparedPosts.filter(
-        (post)=> post.id !== action.postId
-      )
-    };
+          return post;
+        }
+      );
+
+    case DELETE_POST: return preparedPosts
+      .filter(
+        post => post.id !== action.postId
+      );
 
     default:
-      return state;
+      return preparedPosts;
   }
 };
 

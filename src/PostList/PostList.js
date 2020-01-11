@@ -2,49 +2,28 @@
 import React, { useState } from 'react';
 import { connect } from 'react-redux';
 import PropTypes from 'prop-types';
-import getDataFromUrl from '../api/getDataFromUrl';
-import postsUrl from '../api/postsUrl';
-import usersUrl from '../api/usersUrl';
-import commentsUrl from '../api/commentsUrl';
+
 import Post from './Post/Post';
 import { getPreparedPosts,
-  setPosts,
-  getIsLoadedPosts,
-  setIsLoaded } from '../store/PostListReducer';
-import {
-  getIsLoading,
-  setIsLoading } from '../store/IsLoadingReducer';
+  loadPosts } from '../store/PostListReducer';
+import { getIsLoading } from '../store/IsLoadingReducer';
+import { getIsLoadedPosts } from '../store/IsLoadedPostsReducer';
+
+import { hasError } from '../store/hasErrorReducer';
 
 function PostList(
   {
     preparedPosts,
-    setPreparedPosts,
     isLoadingPosts,
-    setIsLoadingPosts,
     isLoadedPosts,
-    setIsLoadedPosts,
+    loadPosts,
+    hasError,
   }
 ) {
   const [searchQuery, setSearchQuery] = useState('');
 
-  const getPreparedPostsFromServer = async() => {
-    const [posts, users, comments] = await Promise.all(
-      [getDataFromUrl(postsUrl, []),
-        getDataFromUrl(usersUrl, []),
-        getDataFromUrl(commentsUrl, [])]
-    );
-
-    return posts.map(
-      post => ({
-        ...post,
-        author: users.find(
-          user => user.id === post.userId
-        ),
-        comments: comments.filter(
-          comment => comment.postId === post.id
-        ),
-      })
-    );
+  const loadPostsFromServer = async() => {
+    await loadPosts();
   };
 
   const handleInputChange = (text) => {
@@ -62,6 +41,33 @@ function PostList(
 
   const debouncedHandleInputChange = debounce(handleInputChange, 1000);
 
+  const visiblePosts = preparedPosts
+    .filter(
+      post => (
+        (post.title + post.body).replace(/[\n\r]/g, ' ')
+          .toLowerCase().includes(searchQuery)
+      )
+    );
+
+  if (hasError) {
+    return (
+      <section>
+        <p>Something went wrong, try to reload page</p>
+        <button
+          type="button"
+          onClick={
+            () => {
+              loadPostsFromServer();
+            }
+
+          }
+        >
+          {isLoadingPosts ? 'Loading' : 'Load the List of Posts'}
+        </button>
+      </section>
+    );
+  }
+
   return (
     isLoadedPosts
       ? (
@@ -74,35 +80,35 @@ function PostList(
             placeholder="type for searching"
           />
 
-          <ul className="posts-list">
+          {
+            visiblePosts.length === 0
+              ? (
+                <section className="nothing-was-found">
+                Nothing was found...
+                </section>
+              )
+              : (
+                <ul className="posts-list">
+                  {visiblePosts
+                    .map(
+                      post => (
+                        <li key={post.id} className="post-list__item">
+                          <Post searchQuery={searchQuery} singlePost={post} />
+                        </li>
+                      )
+                    )
+                  }
+                </ul>
+              )
+          }
 
-            {preparedPosts
-              .filter(
-                post => (
-                  (post.title + post.body).replace(/[\n\r]/g, ' ')
-                    .toLowerCase().includes(searchQuery)
-                )
-              )
-              .map(
-                post => (
-                  <li key={post.id} className="post-list__item">
-                    <Post searchQuery={searchQuery} singlePost={post} />
-                  </li>
-                )
-              )
-            }
-          </ul>
         </section>
       )
       : (
         <button
           type="button"
           onClick={
-            async() => {
-              setIsLoadingPosts(true);
-              setPreparedPosts(await getPreparedPostsFromServer());
-              setIsLoadedPosts(true);
-            }
+            loadPostsFromServer
           }
         >
           {isLoadingPosts ? 'Loading' : 'Load the List of Posts'}
@@ -116,12 +122,11 @@ const mapStateToProps = state => ({
   preparedPosts: getPreparedPosts(state),
   isLoadingPosts: getIsLoading(state),
   isLoadedPosts: getIsLoadedPosts(state),
+  hasError: hasError(state),
 });
 
 const mapDispatchToProps = {
-  setPreparedPosts: setPosts,
-  setIsLoadingPosts: setIsLoading,
-  setIsLoadedPosts: setIsLoaded,
+  loadPosts,
 };
 
 export default connect(
@@ -133,11 +138,10 @@ PostList.propTypes = {
   preparedPosts: PropTypes.arrayOf(
     PropTypes.object
   ),
-  setPreparedPosts: PropTypes.func.isRequired,
   isLoadingPosts: PropTypes.bool.isRequired,
-  setIsLoadingPosts: PropTypes.func.isRequired,
   isLoadedPosts: PropTypes.bool.isRequired,
-  setIsLoadedPosts: PropTypes.func.isRequired,
+  loadPosts: PropTypes.func.isRequired,
+  hasError: PropTypes.func.isRequired,
 };
 
 PostList.defaultProps = {
